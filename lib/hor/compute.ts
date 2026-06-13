@@ -3,6 +3,11 @@
 
 import type { HorDataset, Matrix } from "./types";
 
+// Pareto "vital few" threshold: agents are kept while the cumulative ARP share is
+// still below this fraction. The first agent to reach/exceed it is the cutoff and
+// is left out.
+const PARETO_THRESHOLD = 0.8;
+
 export interface AgentArp {
   code: string;
   occurrence: number; // Oi
@@ -18,7 +23,6 @@ export interface AgentArp {
 // Pareto cumulative can be displayed.
 export function computeArp(ds: HorDataset, hor1: Matrix): AgentArp[] {
   const severityByEvent = new Map(ds.events.map((e) => [e.code, e.severity]));
-  const selected = new Set(ds.selectedAgents);
 
   const base = ds.agents.map((a) => {
     let sumSR = 0;
@@ -32,7 +36,6 @@ export function computeArp(ds: HorDataset, hor1: Matrix): AgentArp[] {
       occurrence: a.occurrence,
       sumSR,
       arp: a.occurrence * sumSR,
-      selected: selected.has(a.code),
     };
   });
 
@@ -41,11 +44,17 @@ export function computeArp(ds: HorDataset, hor1: Matrix): AgentArp[] {
   let running = 0;
   return ranked.map((r, i) => {
     running += r.arp;
+    const cumulativePct = total > 0 ? running / total : 0;
+    // Selected by Pareto: keep the agent while its own cumulative share is still
+    // under the threshold. The first agent to reach 80% is the cutoff and is
+    // dropped. Rank 1 is always kept so a single dominant agent never produces an
+    // empty set.
     return {
       ...r,
       rank: i + 1,
       cumulative: running,
-      cumulativePct: total > 0 ? running / total : 0,
+      cumulativePct,
+      selected: i === 0 || cumulativePct < PARETO_THRESHOLD,
     };
   });
 }

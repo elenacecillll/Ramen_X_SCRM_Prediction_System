@@ -510,8 +510,9 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
               </table>
             </div>
             <p className="border-t border-black/[0.06] px-4 py-3 text-[12px] text-[#86868b] dark:border-white/10">
-              Peringkat berwarna biru menandai 14 risk agent terpilih oleh Pareto yang
-              dibawa ke fase 2. Himpunan 14 agent ini tetap selama simulasi.
+              Peringkat berwarna biru menandai risk agent terpilih oleh Pareto, yaitu yang
+              kumulatif ARP-nya masih di bawah 80 persen. Fase 2 tetap memakai 14 agent
+              terpilih dari data awal karena hanya untuk agent itu tersedia data efektivitas.
             </p>
           </Card>
         </section>
@@ -537,7 +538,7 @@ function ParetoSection({ arp }: { arp: AgentArp[] }) {
       <SectionHead
         eyebrow="Fase 1"
         title="Peringkat ARP dan Pareto"
-        desc="Risk agent diurutkan dari ARP tertinggi. Baris bertanda biru terpilih sebagai prioritas dan dibawa ke fase 2."
+        desc="Risk agent diurutkan dari ARP tertinggi. Baris bertanda biru terpilih sebagai prioritas, yaitu selama kumulatif ARP masih di bawah 80 persen."
       />
       <Card>
         <table className="w-full border-collapse text-[14px]">
