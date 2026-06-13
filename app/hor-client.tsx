@@ -599,6 +599,7 @@ function Hor2Section({
       <SectionHead
         eyebrow="Fase 2"
         title="Pemetaan Hubungan Risk Agent dengan Preventive Action"
+        desc=""
       />
       <Card>
         <div className="overflow-x-auto">
