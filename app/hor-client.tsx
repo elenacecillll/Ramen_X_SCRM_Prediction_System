@@ -256,18 +256,14 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
       <div className="mx-auto max-w-[1320px] px-6 sm:px-10">
         {/* Hero */}
         <header className="py-14 sm:py-20">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0071e3] dark:text-[#5eabff]">
-            House of Risk
-          </p>
           <h1 className="mt-3 text-[40px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[56px]">
-            Prioritas mitigasi risiko
+            Sistem Prediksi Analisa Risiko
             <br />
-            rantai pasok Ramen X.
+            Rantai Pasok Ramen X
           </h1>
           <p className="mt-5 max-w-2xl text-[19px] leading-relaxed text-[#6e6e73] dark:text-[#98989d]">
-            Dihitung otomatis dari data penilaian, mulai dari ARP dan seleksi Pareto pada
-            fase 1 hingga rasio ETDk pada fase 2. Ubah matriks Risk Event terhadap Risk
-            Agent untuk melihat bagaimana urutan prioritas tindakan bergeser.
+            Dihitung secara otomatis berdasarkan penilaian untuk mendapatkan prediksi urutan prioritas
+            tindakan mitigasi terbaik dalam menangani risiko pada aliran rantai pasok perusahaan
           </p>
         </header>
 
@@ -275,11 +271,10 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
         <section className="pb-16">
           <SectionHead
             eyebrow="Output"
-            title="Peringkat tindakan mitigasi"
+            title="Peringkat Tindakan Mitigasi"
             desc={
               <>
-                ETDk sama dengan TEk dibagi Dk. Semakin tinggi nilainya, semakin efektif
-                tindakan dalam menangani risiko relatif terhadap tingkat kesulitannya.
+                Semakin tinggi nilai ETDk, maka semakin prioritas dalam mengurangi risiko
               </>
             }
           />
@@ -355,15 +350,12 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
         <section id="hor1-section" className="scroll-mt-20 pb-16">
           <SectionHead
             eyebrow="Fase 1"
-            title="Matriks Risk Event terhadap Risk Agent"
+            title="Matriks Hubungan Risk Event dengan Risk Agent"
             desc={
               <>
-                Nilai korelasi Rij dipilih dari himpunan 0, 1, 3, dan 9. ARPj sama dengan Oj
-                dikali jumlah dari Si dikali Rij. Severity Si dan occurrence Oj dinilai pada
-                skala 1 sampai 10.
                 {editMode
                   ? " Mode edit aktif, ubah sel korelasi, kolom Si, maupun baris Oj."
-                  : " Ketuk Edit matriks risiko untuk mulai menyunting."}
+                  : " Klik edit matriks risiko untuk mengubah prediksi"}
               </>
             }
           />
@@ -537,7 +529,8 @@ function ParetoSection({ arp }: { arp: AgentArp[] }) {
       <SectionHead
         eyebrow="Fase 1"
         title="Peringkat ARP dan Pareto"
-        desc="Risk agent diurutkan dari ARP tertinggi. Baris bertanda biru terpilih sebagai prioritas dan dibawa ke fase 2."
+        desc="Risk Agent diurutkan dari nilai ARP tertinggi. 
+        Baris berwarna biru terpilih sebagai prioritas dan akan lanjut ke HOR fase 2."
       />
       <Card>
         <table className="w-full border-collapse text-[14px]">
@@ -602,8 +595,8 @@ function Hor2Section({
     <section className="pb-16">
       <SectionHead
         eyebrow="Fase 2"
-        title="Matriks Risk Agent terhadap Preventive Action"
-        desc="Nilai efektivitas Ejk dipilih dari himpunan 0, 1, 3, dan 9. TEk sama dengan jumlah dari ARPj dikali Ejk, lalu ETDk sama dengan TEk dibagi Dk."
+        title="Pemetaan Hubungan Risk Agent dengan Preventive Action"
+        desc=""
       />
       <Card>
         <div className="overflow-x-auto">
