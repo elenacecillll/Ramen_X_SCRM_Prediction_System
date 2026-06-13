@@ -274,7 +274,7 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
             title="Peringkat Tindakan Mitigasi"
             desc={
               <>
-                Semakin tinggi nilai ETDk, maka semakin efektif dalam mengurangi risiko
+                Semakin tinggi nilai ETDk, maka semakin prioritas dalam mengurangi risiko
               </>
             }
           />
@@ -355,7 +355,7 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
               <>
                 {editMode
                   ? " Mode edit aktif, ubah sel korelasi, kolom Si, maupun baris Oj."
-                  : " Ketuk Edit matriks risiko untuk mulai menyunting."}
+                  : " Klik "edit matriks risiko" untuk mengubah prediksi"}
               </>
             }
           />
