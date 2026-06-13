@@ -256,9 +256,6 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
       <div className="mx-auto max-w-[1320px] px-6 sm:px-10">
         {/* Hero */}
         <header className="py-14 sm:py-20">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0071e3] dark:text-[#5eabff]">
-            House of Risk
-          </p>
           <h1 className="mt-3 text-[40px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[56px]">
             Sistem Prediksi Analisa Risiko
             <br />
@@ -353,7 +350,7 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
         <section id="hor1-section" className="scroll-mt-20 pb-16">
           <SectionHead
             eyebrow="Fase 1"
-            title="Matriks Hubungan <i>Risk Event</i> dengan <i>Risk Agent</i>"
+            title="Matriks Hubungan Risk Event dengan Risk Agent"
             desc={
               <>
                 {editMode
