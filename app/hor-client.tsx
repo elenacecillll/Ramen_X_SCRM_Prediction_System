@@ -20,36 +20,102 @@ const fmtInt = (n: number) => n.toLocaleString("id-ID");
 const fmtEtd = (n: number) =>
   n.toLocaleString("id-ID", { maximumFractionDigits: 2 });
 
+// Graded blue intensity for correlation strength (0, 1, 3, 9).
 function relationClass(v: number): string {
-  if (v === 9) return "bg-red-100 text-red-800 dark:bg-red-950/70 dark:text-red-200";
-  if (v === 3)
-    return "bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-200";
-  if (v === 1)
-    return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-200";
-  return "text-zinc-300 dark:text-zinc-700";
+  if (v === 9) return "bg-[#0071e3] text-white";
+  if (v === 3) return "bg-[#0071e3]/15 text-[#0071e3] dark:bg-[#0a84ff]/25 dark:text-[#5eabff]";
+  if (v === 1) return "bg-[#0071e3]/[0.07] text-[#0071e3]/80 dark:bg-[#0a84ff]/10 dark:text-[#5eabff]/90";
+  return "text-black/15 dark:text-white/15";
+}
+
+function ArrowUp() {
+  return (
+    <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden className="shrink-0">
+      <path d="M4 1 L7.2 6.5 L0.8 6.5 Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ArrowDown() {
+  return (
+    <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden className="shrink-0">
+      <path d="M4 7 L0.8 1.5 L7.2 1.5 Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function Check() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden className="inline-block">
+      <path
+        d="M2.5 7.5 L5.5 10.5 L11.5 3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 function RankDelta({ delta }: { delta: number }) {
-  if (delta === 0)
-    return <span className="text-zinc-400" title="rank tetap">—</span>;
-  if (delta > 0)
-    return (
-      <span className="text-emerald-600 dark:text-emerald-400" title={`naik ${delta} peringkat`}>
-        ▲{delta}
-      </span>
-    );
+  if (delta === 0) return null;
+  const up = delta > 0;
   return (
-    <span className="text-red-600 dark:text-red-400" title={`turun ${-delta} peringkat`}>
-      ▼{-delta}
+    <span
+      className={`inline-flex items-center gap-1 text-[11px] font-semibold tabular-nums ${
+        up ? "text-[#34c759]" : "text-[#ff3b30]"
+      }`}
+      title={up ? `naik ${delta} peringkat` : `turun ${-delta} peringkat`}
+    >
+      {up ? <ArrowUp /> : <ArrowDown />}
+      {Math.abs(delta)}
     </span>
   );
 }
+
+// Reusable styled containers tuned to an Apple-like aesthetic.
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.12)] dark:border-white/10 dark:bg-[#1c1c1e]">
+      {children}
+    </div>
+  );
+}
+
+function SectionHead({
+  eyebrow,
+  title,
+  desc,
+}: {
+  eyebrow: string;
+  title: string;
+  desc: React.ReactNode;
+}) {
+  return (
+    <div className="mb-5">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#0071e3] dark:text-[#5eabff]">
+        {eyebrow}
+      </p>
+      <h2 className="mt-1.5 text-[26px] font-semibold leading-tight tracking-[-0.02em]">
+        {title}
+      </h2>
+      <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-[#6e6e73] dark:text-[#98989d]">
+        {desc}
+      </p>
+    </div>
+  );
+}
+
+const thBase =
+  "px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#86868b] dark:text-[#8d8d92]";
 
 export default function HorClient({ dataset }: { dataset: HorDataset }) {
   const [hor1, setHor1] = useState<Matrix>(() => cloneMatrix(dataset.hor1));
   const [editMode, setEditMode] = useState(false);
 
-  // Baseline pipeline from the untouched Excel data — used to show simulation deltas.
+  // Baseline pipeline from the untouched Excel data, used to show simulation deltas.
   const baseline = useMemo(() => {
     const arp = computeArp(dataset, dataset.hor1);
     const arpByAgent: Record<string, number> = {};
@@ -63,7 +129,7 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
     return m;
   }, [baseline]);
 
-  // Current pipeline — recomputed on every edit.
+  // Current pipeline, recomputed on every edit.
   const { arp, arpByAgent, actions } = useMemo(() => {
     const arp = computeArp(dataset, hor1);
     const arpByAgent: Record<string, number> = {};
@@ -91,317 +157,359 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
     setHor1(cloneMatrix(dataset.hor1));
   }
 
-  const severityByEvent = new Map(dataset.events.map((e) => [e.code, e.severity]));
   const arpRankByAgent = new Map(arp.map((a) => [a.code, a]));
+  const maxEtd = Math.max(1, ...actions.map((a) => a.etd));
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          HOR–MOORA · Analisis Risiko Rantai Pasok
-        </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Ramen X — pipeline HOR fase 1 (ARP &amp; Pareto) → HOR fase 2 (ETDₖ).
-          Edit matriks <em>Risk Event × Risk Agent</em> untuk mensimulasikan dampaknya
-          terhadap prioritas tindakan mitigasi.
-        </p>
-      </header>
-
+    <div>
       {/* Toolbar */}
-      <div className="sticky top-0 z-20 -mx-4 mb-8 flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-white/90 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8 dark:border-zinc-800 dark:bg-zinc-950/90">
-        <button
-          onClick={() => {
-            setEditMode((v) => !v);
-            if (!editMode) {
-              document
-                .getElementById("hor1-section")
-                ?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-          }}
-          className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-            editMode
-              ? "bg-emerald-600 text-white hover:bg-emerald-700"
-              : "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-          }`}
-        >
-          {editMode ? "✓ Selesai mengedit" : "✎ Edit matriks risiko"}
-        </button>
-        <button
-          onClick={reset}
-          disabled={!dirty}
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors enabled:hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:enabled:hover:bg-zinc-800"
-        >
-          ↺ Reset ke data Excel
-        </button>
-        {dirty && (
-          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-            mode simulasi — nilai diubah dari Excel
+      <div className="sticky top-0 z-30 border-b border-black/[0.06] bg-[#f5f5f7]/80 backdrop-blur-xl dark:border-white/10 dark:bg-black/70">
+        <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-3 px-6 py-3.5 sm:px-10">
+          <span className="mr-auto text-[15px] font-semibold tracking-[-0.01em]">
+            HOR-MOORA
+            <span className="ml-2 font-normal text-[#86868b]">Ramen X</span>
           </span>
-        )}
-        {editMode && (
-          <span className="text-xs text-zinc-500">
-            Klik sel pada matriks HOR1 (nilai 0 / 1 / 3 / 9). Hasil ETDₖ otomatis dihitung ulang.
-          </span>
-        )}
+          {dirty && (
+            <span className="rounded-full bg-[#0071e3]/10 px-3 py-1 text-[12px] font-medium text-[#0071e3] dark:text-[#5eabff]">
+              Mode simulasi
+            </span>
+          )}
+          <button
+            onClick={reset}
+            disabled={!dirty}
+            className="rounded-full px-4 py-2 text-[14px] font-medium text-[#0071e3] transition-colors enabled:hover:bg-[#0071e3]/[0.08] disabled:opacity-30 dark:text-[#5eabff]"
+          >
+            Reset
+          </button>
+          <button
+            onClick={() => {
+              const next = !editMode;
+              setEditMode(next);
+              if (next) {
+                document
+                  .getElementById("hor1-section")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }}
+            className="rounded-full bg-[#0071e3] px-5 py-2 text-[14px] font-medium text-white transition-colors hover:bg-[#0077ed] active:bg-[#006edb]"
+          >
+            {editMode ? "Selesai" : "Edit matriks risiko"}
+          </button>
+        </div>
       </div>
 
-      {/* ============ OUTPUT: ETDk priority ranking ============ */}
-      <section className="mb-10">
-        <h2 className="mb-1 text-xl font-semibold">
-          Prioritas Tindakan Mitigasi — Ranking ETDₖ
-        </h2>
-        <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-          ETDₖ = TEₖ / Dₖ. Semakin tinggi, semakin <em>cost-effective</em> tindakan mitigasinya.
-        </p>
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-zinc-50 text-left dark:bg-zinc-900">
-                <th className="px-3 py-2 font-semibold">Rank</th>
-                <th className="px-3 py-2 font-semibold">Δ</th>
-                <th className="px-3 py-2 font-semibold">Kode</th>
-                <th className="px-3 py-2 font-semibold">Tindakan Mitigasi (PA)</th>
-                <th className="px-3 py-2 text-right font-semibold">TEₖ</th>
-                <th className="px-3 py-2 text-right font-semibold">Dₖ</th>
-                <th className="px-3 py-2 text-right font-semibold">ETDₖ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {actions.map((pa) => {
-                const base = baselineRank.get(pa.code);
-                const delta = base ? base.rank - pa.rank : 0;
-                const top3 = pa.rank <= 3;
-                return (
-                  <tr
-                    key={pa.code}
-                    className={`border-t border-zinc-100 dark:border-zinc-800/70 ${
-                      top3 ? "bg-emerald-50/60 dark:bg-emerald-950/30" : ""
-                    }`}
-                  >
-                    <td className="px-3 py-2">
-                      <span
-                        className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                          top3
-                            ? "bg-emerald-600 text-white"
-                            : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                        }`}
-                      >
-                        {pa.rank}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-xs font-medium">
-                      {dirty ? <RankDelta delta={delta} /> : null}
-                    </td>
-                    <td className="px-3 py-2 font-mono font-semibold">{pa.code}</td>
-                    <td className="px-3 py-2">{pa.name}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{fmtInt(pa.te)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{pa.difficulty}</td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                      {fmtEtd(pa.etd)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <div className="mx-auto max-w-[1320px] px-6 sm:px-10">
+        {/* Hero */}
+        <header className="py-14 sm:py-20">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0071e3] dark:text-[#5eabff]">
+            House of Risk
+          </p>
+          <h1 className="mt-3 text-[40px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[56px]">
+            Prioritas mitigasi risiko
+            <br />
+            rantai pasok Ramen X.
+          </h1>
+          <p className="mt-5 max-w-2xl text-[19px] leading-relaxed text-[#6e6e73] dark:text-[#98989d]">
+            Dihitung otomatis dari data penilaian, mulai dari ARP dan seleksi Pareto pada
+            fase 1 hingga rasio ETDk pada fase 2. Ubah matriks Risk Event terhadap Risk
+            Agent untuk melihat bagaimana urutan prioritas tindakan bergeser.
+          </p>
+        </header>
 
-      {/* ============ HOR1 editable correlation matrix ============ */}
-      <section id="hor1-section" className="mb-10">
-        <h2 className="mb-1 text-xl font-semibold">
-          HOR Fase 1 — Matriks Risk Event × Risk Agent
-        </h2>
-        <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-          Korelasi (Rᵢⱼ ∈ {"{0, 1, 3, 9}"}). ARPⱼ = Oⱼ × Σ(Sᵢ × Rᵢⱼ).
-          {editMode ? " Mode edit aktif — ubah nilai sel di bawah." : ""}
-        </p>
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-          <table className="border-collapse text-xs">
-            <thead>
-              <tr className="bg-zinc-50 dark:bg-zinc-900">
-                <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-2 text-left dark:bg-zinc-900">
-                  Event
-                </th>
-                <th className="px-2 py-2 text-right">Sᵢ</th>
-                {dataset.agents.map((a) => (
-                  <th
-                    key={a.code}
-                    className="px-1.5 py-2 font-mono font-medium"
-                    title={a.name}
-                  >
-                    {a.code}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dataset.events.map((e) => (
-                <tr key={e.code} className="border-t border-zinc-100 dark:border-zinc-800/70">
-                  <th
-                    className="sticky left-0 z-10 max-w-[180px] truncate bg-white px-2 py-1 text-left font-mono font-medium dark:bg-zinc-950"
-                    title={`${e.code} — ${e.name}`}
-                  >
-                    {e.code}
-                  </th>
-                  <td className="px-2 py-1 text-right tabular-nums text-zinc-500">
-                    {e.severity}
-                  </td>
-                  {dataset.agents.map((a) => {
-                    const v = hor1[e.code]?.[a.code] ?? 0;
-                    return (
-                      <td key={a.code} className="p-0 text-center">
-                        {editMode ? (
-                          <select
-                            value={v}
-                            onChange={(ev) =>
-                              setCell(e.code, a.code, Number(ev.target.value))
-                            }
-                            className={`h-7 w-9 cursor-pointer appearance-none rounded text-center text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 ${relationClass(
-                              v,
-                            )}`}
-                          >
-                            {RELATION_VALUES.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span
-                            className={`inline-flex h-7 w-9 items-center justify-center text-xs font-semibold ${relationClass(
-                              v,
-                            )}`}
-                          >
-                            {v === 0 ? "·" : v}
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
+        {/* OUTPUT: ETDk ranking */}
+        <section className="pb-16">
+          <SectionHead
+            eyebrow="Output"
+            title="Peringkat tindakan mitigasi"
+            desc={
+              <>
+                ETDk sama dengan TEk dibagi Dk. Semakin tinggi nilainya, semakin efektif
+                tindakan dalam menangani risiko relatif terhadap tingkat kesulitannya.
+              </>
+            }
+          />
+          <Card>
+            <table className="w-full border-collapse text-[14px]">
+              <thead>
+                <tr className="border-b border-black/[0.06] text-left dark:border-white/10">
+                  <th className={thBase}>Rank</th>
+                  <th className={thBase}>Kode</th>
+                  <th className={thBase}>Tindakan mitigasi</th>
+                  <th className={`${thBase} text-right`}>TEk</th>
+                  <th className={`${thBase} text-right`}>Dk</th>
+                  <th className={`${thBase} text-right`}>ETDk</th>
+                  <th className={`${thBase} w-40`}>&nbsp;</th>
                 </tr>
-              ))}
-              {/* Oi row */}
-              <tr className="border-t-2 border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-                <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-1 text-left dark:bg-zinc-900">
-                  Oⱼ
-                </th>
-                <td />
-                {dataset.agents.map((a) => (
-                  <td key={a.code} className="px-1 py-1 text-center tabular-nums text-zinc-500">
-                    {a.occurrence}
-                  </td>
-                ))}
-              </tr>
-              {/* ARP row */}
-              <tr className="bg-zinc-50 dark:bg-zinc-900">
-                <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-1 text-left dark:bg-zinc-900">
-                  ARPⱼ
-                </th>
-                <td />
-                {dataset.agents.map((a) => (
-                  <td
-                    key={a.code}
-                    className="px-1 py-1 text-center font-semibold tabular-nums"
-                  >
-                    {fmtInt(arpByAgent[a.code] ?? 0)}
-                  </td>
-                ))}
-              </tr>
-              {/* Rank row */}
-              <tr className="bg-zinc-50 dark:bg-zinc-900">
-                <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-1 text-left dark:bg-zinc-900">
-                  Rank
-                </th>
-                <td />
-                {dataset.agents.map((a) => {
-                  const info = arpRankByAgent.get(a.code);
+              </thead>
+              <tbody className="divide-y divide-black/[0.05] dark:divide-white/[0.07]">
+                {actions.map((pa) => {
+                  const base = baselineRank.get(pa.code);
+                  const delta = base ? base.rank - pa.rank : 0;
+                  const top3 = pa.rank <= 3;
                   return (
-                    <td
-                      key={a.code}
-                      className={`px-1 py-1 text-center tabular-nums ${
-                        info?.selected ? "font-bold text-emerald-600 dark:text-emerald-400" : "text-zinc-400"
-                      }`}
-                      title={info?.selected ? "Terpilih (Pareto)" : undefined}
+                    <tr
+                      key={pa.code}
+                      className="transition-colors hover:bg-black/[0.015] dark:hover:bg-white/[0.03]"
                     >
-                      {info?.rank}
-                    </td>
+                      <td className="px-4 py-3.5">
+                        <span
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums ${
+                            top3
+                              ? "bg-[#0071e3] text-white"
+                              : "bg-black/[0.06] text-[#1d1d1f] dark:bg-white/10 dark:text-[#f5f5f7]"
+                          }`}
+                        >
+                          {pa.rank}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-[13px] font-semibold text-[#86868b]">
+                        {pa.code}
+                      </td>
+                      <td className="px-4 py-3.5 font-medium">{pa.name}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums text-[#6e6e73] dark:text-[#98989d]">
+                        {fmtInt(pa.te)}
+                      </td>
+                      <td className="px-4 py-3.5 text-right tabular-nums text-[#6e6e73] dark:text-[#98989d]">
+                        {pa.difficulty}
+                      </td>
+                      <td className="px-4 py-3.5 text-right text-[15px] font-semibold tabular-nums">
+                        {fmtEtd(pa.etd)}
+                      </td>
+                      <td className="py-3.5 pr-5">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10">
+                            <div
+                              className={`h-full rounded-full ${
+                                top3 ? "bg-[#0071e3]" : "bg-[#86868b]/60"
+                              }`}
+                              style={{ width: `${(pa.etd / maxEtd) * 100}%` }}
+                            />
+                          </div>
+                          {dirty && <RankDelta delta={delta} />}
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-2 text-xs text-zinc-500">
-          Sₐ disorot hijau = 14 risk agent terpilih (Pareto) yang dibawa ke HOR fase 2.
-          Catatan: set 14 agent ini tetap (fixed) saat simulasi.
-        </p>
-      </section>
+              </tbody>
+            </table>
+          </Card>
+        </section>
 
-      {/* ============ ARP ranking + Pareto ============ */}
-      <ParetoSection arp={arp} />
+        {/* HOR1 editable matrix */}
+        <section id="hor1-section" className="scroll-mt-20 pb-16">
+          <SectionHead
+            eyebrow="Fase 1"
+            title="Matriks Risk Event terhadap Risk Agent"
+            desc={
+              <>
+                Nilai korelasi Rij dipilih dari himpunan 0, 1, 3, dan 9. ARPj sama dengan Oj
+                dikali jumlah dari Si dikali Rij.
+                {editMode
+                  ? " Mode edit aktif, ketuk sel untuk mengubah nilainya."
+                  : " Ketuk Edit matriks risiko untuk mulai menyunting."}
+              </>
+            }
+          />
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="border-collapse text-[12px]">
+                <thead>
+                  <tr className="border-b border-black/[0.06] dark:border-white/10">
+                    <th className="sticky left-0 z-10 bg-white px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#86868b] dark:bg-[#1c1c1e]">
+                      Event
+                    </th>
+                    <th className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#86868b]">
+                      Si
+                    </th>
+                    {dataset.agents.map((a) => (
+                      <th
+                        key={a.code}
+                        className="px-1.5 py-3 font-mono text-[11px] font-medium text-[#86868b]"
+                        title={a.name}
+                      >
+                        {a.code}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {dataset.events.map((e) => (
+                    <tr
+                      key={e.code}
+                      className="border-t border-black/[0.04] dark:border-white/[0.06]"
+                    >
+                      <th
+                        className="sticky left-0 z-10 bg-white px-4 py-1.5 text-left font-mono text-[12px] font-medium dark:bg-[#1c1c1e]"
+                        title={`${e.code}. ${e.name}`}
+                      >
+                        {e.code}
+                      </th>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-[#86868b]">
+                        {e.severity}
+                      </td>
+                      {dataset.agents.map((a) => {
+                        const v = hor1[e.code]?.[a.code] ?? 0;
+                        return (
+                          <td key={a.code} className="p-0.5 text-center">
+                            {editMode ? (
+                              <select
+                                value={v}
+                                onChange={(ev) =>
+                                  setCell(e.code, a.code, Number(ev.target.value))
+                                }
+                                className={`h-7 w-9 cursor-pointer appearance-none rounded-md text-center text-[12px] font-semibold outline-none transition-colors focus:ring-2 focus:ring-[#0071e3] ${relationClass(
+                                  v,
+                                )}`}
+                              >
+                                {RELATION_VALUES.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span
+                                className={`inline-flex h-7 w-9 items-center justify-center rounded-md text-[12px] font-semibold ${relationClass(
+                                  v,
+                                )}`}
+                              >
+                                {v === 0 ? "" : v}
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  <tr className="border-t border-black/[0.08] bg-black/[0.015] dark:border-white/10 dark:bg-white/[0.03]">
+                    <th className="sticky left-0 z-10 bg-[#fafafa] px-4 py-1.5 text-left text-[12px] font-semibold dark:bg-[#222]">
+                      Oj
+                    </th>
+                    <td />
+                    {dataset.agents.map((a) => (
+                      <td
+                        key={a.code}
+                        className="px-1 py-1.5 text-center tabular-nums text-[#86868b]"
+                      >
+                        {a.occurrence}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="bg-black/[0.015] dark:bg-white/[0.03]">
+                    <th className="sticky left-0 z-10 bg-[#fafafa] px-4 py-1.5 text-left text-[12px] font-semibold dark:bg-[#222]">
+                      ARPj
+                    </th>
+                    <td />
+                    {dataset.agents.map((a) => (
+                      <td
+                        key={a.code}
+                        className="px-1 py-1.5 text-center text-[12px] font-semibold tabular-nums"
+                      >
+                        {fmtInt(arpByAgent[a.code] ?? 0)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="bg-black/[0.015] dark:bg-white/[0.03]">
+                    <th className="sticky left-0 z-10 bg-[#fafafa] px-4 py-1.5 text-left text-[12px] font-semibold dark:bg-[#222]">
+                      Rank
+                    </th>
+                    <td />
+                    {dataset.agents.map((a) => {
+                      const info = arpRankByAgent.get(a.code);
+                      return (
+                        <td
+                          key={a.code}
+                          className={`px-1 py-1.5 text-center tabular-nums ${
+                            info?.selected
+                              ? "font-semibold text-[#0071e3] dark:text-[#5eabff]"
+                              : "text-[#86868b]/60"
+                          }`}
+                          title={info?.selected ? "Terpilih oleh Pareto" : undefined}
+                        >
+                          {info?.rank}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="border-t border-black/[0.06] px-4 py-3 text-[12px] text-[#86868b] dark:border-white/10">
+              Peringkat berwarna biru menandai 14 risk agent terpilih oleh Pareto yang
+              dibawa ke fase 2. Himpunan 14 agent ini tetap selama simulasi.
+            </p>
+          </Card>
+        </section>
 
-      {/* ============ HOR2 matrix ============ */}
-      <Hor2Section
-        dataset={dataset}
-        arpByAgent={arpByAgent}
-        actions={actions}
-      />
+        {/* ARP ranking + Pareto */}
+        <ParetoSection arp={arp} />
+
+        {/* HOR2 matrix */}
+        <Hor2Section dataset={dataset} arpByAgent={arpByAgent} actions={actions} />
+
+        <footer className="border-t border-black/[0.06] py-10 text-[12px] text-[#86868b] dark:border-white/10">
+          Sumber data dibaca langsung dari berkas penilaian Excel. Seluruh nilai turunan
+          dihitung ulang secara langsung di peramban.
+        </footer>
+      </div>
     </div>
   );
 }
 
 function ParetoSection({ arp }: { arp: AgentArp[] }) {
   return (
-    <section className="mb-10">
-      <h2 className="mb-1 text-xl font-semibold">
-        HOR Fase 1 — Ranking ARP &amp; Pareto 80/20
-      </h2>
-      <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-        Risk agent diurutkan dari ARP tertinggi. Baris hijau = terpilih sebagai prioritas
-        (dibawa ke HOR fase 2).
-      </p>
-      <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-        <table className="w-full border-collapse text-sm">
+    <section className="pb-16">
+      <SectionHead
+        eyebrow="Fase 1"
+        title="Peringkat ARP dan Pareto"
+        desc="Risk agent diurutkan dari ARP tertinggi. Baris bertanda biru terpilih sebagai prioritas dan dibawa ke fase 2."
+      />
+      <Card>
+        <table className="w-full border-collapse text-[14px]">
           <thead>
-            <tr className="bg-zinc-50 text-left dark:bg-zinc-900">
-              <th className="px-3 py-2 font-semibold">Rank</th>
-              <th className="px-3 py-2 font-semibold">Agent</th>
-              <th className="px-3 py-2 text-right font-semibold">ARPⱼ</th>
-              <th className="px-3 py-2 text-right font-semibold">Kumulatif</th>
-              <th className="px-3 py-2 text-right font-semibold">Kumulatif %</th>
-              <th className="px-3 py-2 text-center font-semibold">Terpilih</th>
+            <tr className="border-b border-black/[0.06] text-left dark:border-white/10">
+              <th className={thBase}>Rank</th>
+              <th className={thBase}>Agent</th>
+              <th className={`${thBase} text-right`}>ARPj</th>
+              <th className={`${thBase} text-right`}>Kumulatif</th>
+              <th className={`${thBase} text-right`}>Kumulatif persen</th>
+              <th className={`${thBase} text-center`}>Terpilih</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-black/[0.05] dark:divide-white/[0.07]">
             {arp.map((a) => (
               <tr
                 key={a.code}
-                className={`border-t border-zinc-100 dark:border-zinc-800/70 ${
-                  a.selected ? "bg-emerald-50/60 dark:bg-emerald-950/30" : ""
+                className={`transition-colors hover:bg-black/[0.015] dark:hover:bg-white/[0.03] ${
+                  a.selected ? "bg-[#0071e3]/[0.04]" : ""
                 }`}
               >
-                <td className="px-3 py-1.5 tabular-nums">{a.rank}</td>
-                <td className="px-3 py-1.5 font-mono font-medium">{a.code}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{fmtInt(a.arp)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-zinc-500">
+                <td className="px-4 py-2.5 tabular-nums text-[#6e6e73] dark:text-[#98989d]">
+                  {a.rank}
+                </td>
+                <td className="px-4 py-2.5 font-mono font-medium">{a.code}</td>
+                <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
+                  {fmtInt(a.arp)}
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-[#86868b]">
                   {fmtInt(a.cumulative)}
                 </td>
-                <td className="px-3 py-1.5 text-right tabular-nums">
-                  {(a.cumulativePct * 100).toFixed(2)}%
+                <td className="px-4 py-2.5 text-right tabular-nums text-[#6e6e73] dark:text-[#98989d]">
+                  {(a.cumulativePct * 100).toFixed(2)} persen
                 </td>
-                <td className="px-3 py-1.5 text-center">
+                <td className="px-4 py-2.5 text-center">
                   {a.selected ? (
-                    <span className="text-emerald-600 dark:text-emerald-400">●</span>
-                  ) : (
-                    <span className="text-zinc-300 dark:text-zinc-700">○</span>
-                  )}
+                    <span className="text-[#0071e3] dark:text-[#5eabff]">
+                      <Check />
+                    </span>
+                  ) : null}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
     </section>
   );
 }
@@ -415,107 +523,124 @@ function Hor2Section({
   arpByAgent: Record<string, number>;
   actions: ActionResult[];
 }) {
-  // Display PAs in natural order (PA1..PA14) for the matrix columns.
   const byCode = new Map(actions.map((a) => [a.code, a]));
   return (
-    <section className="mb-10">
-      <h2 className="mb-1 text-xl font-semibold">
-        HOR Fase 2 — Matriks Risk Agent × Preventive Action
-      </h2>
-      <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-        Efektivitas (Eⱼₖ ∈ {"{0, 1, 3, 9}"}). TEₖ = Σ(ARPⱼ × Eⱼₖ); ETDₖ = TEₖ / Dₖ.
-      </p>
-      <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-        <table className="border-collapse text-xs">
-          <thead>
-            <tr className="bg-zinc-50 dark:bg-zinc-900">
-              <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-2 text-left dark:bg-zinc-900">
-                Agent
-              </th>
-              <th className="px-2 py-2 text-right">ARPⱼ</th>
-              {dataset.actions.map((pa) => (
-                <th key={pa.code} className="px-1.5 py-2 font-mono" title={pa.name}>
-                  {pa.code}
+    <section className="pb-16">
+      <SectionHead
+        eyebrow="Fase 2"
+        title="Matriks Risk Agent terhadap Preventive Action"
+        desc="Nilai efektivitas Ejk dipilih dari himpunan 0, 1, 3, dan 9. TEk sama dengan jumlah dari ARPj dikali Ejk, lalu ETDk sama dengan TEk dibagi Dk."
+      />
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="border-collapse text-[12px]">
+            <thead>
+              <tr className="border-b border-black/[0.06] dark:border-white/10">
+                <th className="sticky left-0 z-10 bg-white px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#86868b] dark:bg-[#1c1c1e]">
+                  Agent
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {dataset.selectedAgents.map((ag) => (
-              <tr key={ag} className="border-t border-zinc-100 dark:border-zinc-800/70">
-                <th className="sticky left-0 z-10 bg-white px-2 py-1 text-left font-mono font-medium dark:bg-zinc-950">
-                  {ag}
+                <th className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-[#86868b]">
+                  ARPj
                 </th>
-                <td className="px-2 py-1 text-right tabular-nums text-zinc-500">
-                  {fmtInt(arpByAgent[ag] ?? 0)}
-                </td>
-                {dataset.actions.map((pa) => {
-                  const v = dataset.hor2[ag]?.[pa.code] ?? 0;
-                  return (
-                    <td
-                      key={pa.code}
-                      className={`px-1.5 py-1 text-center font-semibold ${relationClass(v)}`}
-                    >
-                      {v === 0 ? "·" : v}
-                    </td>
-                  );
-                })}
+                {dataset.actions.map((pa) => (
+                  <th
+                    key={pa.code}
+                    className="px-1.5 py-3 font-mono text-[11px] font-medium text-[#86868b]"
+                    title={pa.name}
+                  >
+                    {pa.code}
+                  </th>
+                ))}
               </tr>
-            ))}
-            {/* TEk */}
-            <tr className="border-t-2 border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-              <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-1 text-left dark:bg-zinc-900">
-                TEₖ
-              </th>
-              <td />
-              {dataset.actions.map((pa) => (
-                <td key={pa.code} className="px-1 py-1 text-center font-semibold tabular-nums">
-                  {fmtInt(byCode.get(pa.code)?.te ?? 0)}
-                </td>
-              ))}
-            </tr>
-            {/* Dk */}
-            <tr className="bg-zinc-50 dark:bg-zinc-900">
-              <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-1 text-left dark:bg-zinc-900">
-                Dₖ
-              </th>
-              <td />
-              {dataset.actions.map((pa) => (
-                <td key={pa.code} className="px-1 py-1 text-center tabular-nums text-zinc-500">
-                  {pa.difficulty}
-                </td>
-              ))}
-            </tr>
-            {/* ETDk */}
-            <tr className="bg-zinc-50 dark:bg-zinc-900">
-              <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-1 text-left dark:bg-zinc-900">
-                ETDₖ
-              </th>
-              <td />
-              {dataset.actions.map((pa) => (
-                <td key={pa.code} className="px-1 py-1 text-center font-semibold tabular-nums">
-                  {fmtEtd(byCode.get(pa.code)?.etd ?? 0)}
-                </td>
-              ))}
-            </tr>
-            {/* Rank */}
-            <tr className="bg-zinc-50 dark:bg-zinc-900">
-              <th className="sticky left-0 z-10 bg-zinc-50 px-2 py-1 text-left dark:bg-zinc-900">
-                Rankₖ
-              </th>
-              <td />
-              {dataset.actions.map((pa) => (
-                <td
-                  key={pa.code}
-                  className="px-1 py-1 text-center font-bold tabular-nums text-emerald-600 dark:text-emerald-400"
+            </thead>
+            <tbody>
+              {dataset.selectedAgents.map((ag) => (
+                <tr
+                  key={ag}
+                  className="border-t border-black/[0.04] dark:border-white/[0.06]"
                 >
-                  {byCode.get(pa.code)?.rank}
-                </td>
+                  <th className="sticky left-0 z-10 bg-white px-4 py-1.5 text-left font-mono text-[12px] font-medium dark:bg-[#1c1c1e]">
+                    {ag}
+                  </th>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-[#86868b]">
+                    {fmtInt(arpByAgent[ag] ?? 0)}
+                  </td>
+                  {dataset.actions.map((pa) => {
+                    const v = dataset.hor2[ag]?.[pa.code] ?? 0;
+                    return (
+                      <td key={pa.code} className="p-0.5 text-center">
+                        <span
+                          className={`inline-flex h-7 w-9 items-center justify-center rounded-md font-semibold ${relationClass(
+                            v,
+                          )}`}
+                        >
+                          {v === 0 ? "" : v}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
               ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              <tr className="border-t border-black/[0.08] bg-black/[0.015] dark:border-white/10 dark:bg-white/[0.03]">
+                <th className="sticky left-0 z-10 bg-[#fafafa] px-4 py-1.5 text-left text-[12px] font-semibold dark:bg-[#222]">
+                  TEk
+                </th>
+                <td />
+                {dataset.actions.map((pa) => (
+                  <td
+                    key={pa.code}
+                    className="px-1 py-1.5 text-center text-[12px] font-semibold tabular-nums"
+                  >
+                    {fmtInt(byCode.get(pa.code)?.te ?? 0)}
+                  </td>
+                ))}
+              </tr>
+              <tr className="bg-black/[0.015] dark:bg-white/[0.03]">
+                <th className="sticky left-0 z-10 bg-[#fafafa] px-4 py-1.5 text-left text-[12px] font-semibold dark:bg-[#222]">
+                  Dk
+                </th>
+                <td />
+                {dataset.actions.map((pa) => (
+                  <td
+                    key={pa.code}
+                    className="px-1 py-1.5 text-center tabular-nums text-[#86868b]"
+                  >
+                    {pa.difficulty}
+                  </td>
+                ))}
+              </tr>
+              <tr className="bg-black/[0.015] dark:bg-white/[0.03]">
+                <th className="sticky left-0 z-10 bg-[#fafafa] px-4 py-1.5 text-left text-[12px] font-semibold dark:bg-[#222]">
+                  ETDk
+                </th>
+                <td />
+                {dataset.actions.map((pa) => (
+                  <td
+                    key={pa.code}
+                    className="px-1 py-1.5 text-center text-[12px] font-semibold tabular-nums"
+                  >
+                    {fmtEtd(byCode.get(pa.code)?.etd ?? 0)}
+                  </td>
+                ))}
+              </tr>
+              <tr className="bg-black/[0.015] dark:bg-white/[0.03]">
+                <th className="sticky left-0 z-10 bg-[#fafafa] px-4 py-1.5 text-left text-[12px] font-semibold dark:bg-[#222]">
+                  Rank
+                </th>
+                <td />
+                {dataset.actions.map((pa) => (
+                  <td
+                    key={pa.code}
+                    className="px-1 py-1.5 text-center text-[12px] font-semibold tabular-nums text-[#0071e3] dark:text-[#5eabff]"
+                  >
+                    {byCode.get(pa.code)?.rank}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </section>
   );
 }
