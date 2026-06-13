@@ -1,8 +1,3 @@
-// Server-only loader: reads the source Excel workbook from /public and extracts the
-// INPUT data (Si, Oi, the HOR1 correlation matrix, the HOR2 effectiveness matrix, Dk,
-// descriptions and the Pareto-selected agent set). Every derived value (ARP, TEk, ETDk)
-// is recomputed by compute.ts so editing stays consistent.
-
 import "server-only";
 import { readFileSync } from "node:fs";
 import path from "node:path";
