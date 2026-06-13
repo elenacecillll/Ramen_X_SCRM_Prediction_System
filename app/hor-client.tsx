@@ -355,7 +355,7 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
               <>
                 {editMode
                   ? " Mode edit aktif, ubah sel korelasi, kolom Si, maupun baris Oj."
-                  : " Klik "edit matriks risiko" untuk mengubah prediksi"}
+                  : " Klik edit matriks risiko untuk mengubah prediksi"}
               </>
             }
           />
