@@ -111,9 +111,56 @@ function SectionHead({
 const thBase =
   "px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#86868b] dark:text-[#8d8d92]";
 
+// Severity (Si) and Occurrence (Oi) are scored on a 1 to 10 scale.
+const SCALE_VALUES = Array.from({ length: 10 }, (_, i) => i + 1);
+
+function ScaleSelect({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="h-7 w-11 cursor-pointer appearance-none rounded-md bg-[#0071e3]/[0.07] text-center text-[12px] font-semibold text-[#0071e3] outline-none transition-colors focus:ring-2 focus:ring-[#0071e3] dark:bg-[#0a84ff]/10 dark:text-[#5eabff]"
+    >
+      {SCALE_VALUES.map((n) => (
+        <option key={n} value={n}>
+          {n}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function HorClient({ dataset }: { dataset: HorDataset }) {
   const [hor1, setHor1] = useState<Matrix>(() => cloneMatrix(dataset.hor1));
+  const [severity, setSeverity] = useState<Record<string, number>>(() =>
+    Object.fromEntries(dataset.events.map((e) => [e.code, e.severity])),
+  );
+  const [occurrence, setOccurrence] = useState<Record<string, number>>(() =>
+    Object.fromEntries(dataset.agents.map((a) => [a.code, a.occurrence])),
+  );
   const [editMode, setEditMode] = useState(false);
+
+  // Dataset with the edited Si / Oi values folded in, used for all calculations.
+  const effectiveDataset = useMemo<HorDataset>(
+    () => ({
+      ...dataset,
+      events: dataset.events.map((e) => ({
+        ...e,
+        severity: severity[e.code] ?? e.severity,
+      })),
+      agents: dataset.agents.map((a) => ({
+        ...a,
+        occurrence: occurrence[a.code] ?? a.occurrence,
+      })),
+    }),
+    [dataset, severity, occurrence],
+  );
 
   // Baseline pipeline from the untouched Excel data, used to show simulation deltas.
   const baseline = useMemo(() => {
@@ -131,20 +178,24 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
 
   // Current pipeline, recomputed on every edit.
   const { arp, arpByAgent, actions } = useMemo(() => {
-    const arp = computeArp(dataset, hor1);
+    const arp = computeArp(effectiveDataset, hor1);
     const arpByAgent: Record<string, number> = {};
     for (const a of arp) arpByAgent[a.code] = a.arp;
-    const actions = computeHor2(dataset, arpByAgent);
+    const actions = computeHor2(effectiveDataset, arpByAgent);
     return { arp, arpByAgent, actions };
-  }, [dataset, hor1]);
+  }, [effectiveDataset, hor1]);
 
   const dirty = useMemo(() => {
-    for (const e of dataset.events)
+    for (const e of dataset.events) {
+      if ((severity[e.code] ?? e.severity) !== e.severity) return true;
       for (const a of dataset.agents)
         if ((hor1[e.code]?.[a.code] ?? 0) !== (dataset.hor1[e.code]?.[a.code] ?? 0))
           return true;
+    }
+    for (const a of dataset.agents)
+      if ((occurrence[a.code] ?? a.occurrence) !== a.occurrence) return true;
     return false;
-  }, [hor1, dataset]);
+  }, [hor1, severity, occurrence, dataset]);
 
   function setCell(eventCode: string, agentCode: string, value: number) {
     setHor1((prev) => ({
@@ -155,6 +206,10 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
 
   function reset() {
     setHor1(cloneMatrix(dataset.hor1));
+    setSeverity(Object.fromEntries(dataset.events.map((e) => [e.code, e.severity])));
+    setOccurrence(
+      Object.fromEntries(dataset.agents.map((a) => [a.code, a.occurrence])),
+    );
   }
 
   const arpRankByAgent = new Map(arp.map((a) => [a.code, a]));
@@ -304,9 +359,10 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
             desc={
               <>
                 Nilai korelasi Rij dipilih dari himpunan 0, 1, 3, dan 9. ARPj sama dengan Oj
-                dikali jumlah dari Si dikali Rij.
+                dikali jumlah dari Si dikali Rij. Severity Si dan occurrence Oj dinilai pada
+                skala 1 sampai 10.
                 {editMode
-                  ? " Mode edit aktif, ketuk sel untuk mengubah nilainya."
+                  ? " Mode edit aktif, ubah sel korelasi, kolom Si, maupun baris Oj."
                   : " Ketuk Edit matriks risiko untuk mulai menyunting."}
               </>
             }
@@ -345,8 +401,17 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
                       >
                         {e.code}
                       </th>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[#86868b]">
-                        {e.severity}
+                      <td className="px-3 py-1 text-center tabular-nums text-[#86868b]">
+                        {editMode ? (
+                          <ScaleSelect
+                            value={severity[e.code] ?? e.severity}
+                            onChange={(v) =>
+                              setSeverity((prev) => ({ ...prev, [e.code]: v }))
+                            }
+                          />
+                        ) : (
+                          (severity[e.code] ?? e.severity)
+                        )}
                       </td>
                       {dataset.agents.map((a) => {
                         const v = hor1[e.code]?.[a.code] ?? 0;
@@ -390,9 +455,18 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
                     {dataset.agents.map((a) => (
                       <td
                         key={a.code}
-                        className="px-1 py-1.5 text-center tabular-nums text-[#86868b]"
+                        className="px-1 py-1 text-center tabular-nums text-[#86868b]"
                       >
-                        {a.occurrence}
+                        {editMode ? (
+                          <ScaleSelect
+                            value={occurrence[a.code] ?? a.occurrence}
+                            onChange={(v) =>
+                              setOccurrence((prev) => ({ ...prev, [a.code]: v }))
+                            }
+                          />
+                        ) : (
+                          (occurrence[a.code] ?? a.occurrence)
+                        )}
                       </td>
                     ))}
                   </tr>
