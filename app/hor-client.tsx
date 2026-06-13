@@ -530,7 +530,7 @@ function ParetoSection({ arp }: { arp: AgentArp[] }) {
       <SectionHead
         eyebrow="Fase 1"
         title="Peringkat ARP dan Pareto"
-        desc="Risk Agent diurutkan dari nilai ARP tertinggi. Baris berwarna biru terpilih sebagai prioritas (kumulatif ARP di bawah 80 persen) dan akan lanjut ke HOR fase 2."
+        desc="Risk Agent diurutkan dari nilai ARP tertinggi. Baris berwarna biru terpilih sebagai prioritas berdasarkan Pareto dan akan lanjut ke HOR fase 2."
       />
       <Card>
         <table className="w-full border-collapse text-[14px]">
