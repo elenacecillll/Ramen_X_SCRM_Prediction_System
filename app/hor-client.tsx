@@ -502,9 +502,7 @@ export default function HorClient({ dataset }: { dataset: HorDataset }) {
               </table>
             </div>
             <p className="border-t border-black/[0.06] px-4 py-3 text-[12px] text-[#86868b] dark:border-white/10">
-              Peringkat berwarna biru menandai risk agent terpilih oleh Pareto, yaitu yang
-              kumulatif ARP-nya masih di bawah 80 persen. Fase 2 tetap memakai 14 agent
-              terpilih dari data awal karena hanya untuk agent itu tersedia data efektivitas.
+              Peringkat berwarna biru menandai risk agent yang terpilih oleh Pareto dan kemudian lanjut ke Fase 2
             </p>
           </Card>
         </section>
